@@ -30,6 +30,13 @@ This repository holds docs and listing metadata. The service is hosted, so you h
 - **Can I take a link back or see who opened it?** Yes. Use `revoke_share` and `get_access_log`. Refused opens are logged too.
 - **Is it a public file host or a paste bin?** No. Files are private by default and every link is an explicit grant you control.
 
+## Guides
+
+- [How an AI agent can send a file to a user](docs/send-file-to-user.md): send a PDF, CSV or report as a link
+- [Temporary download link for AI agents](docs/temporary-download-link.md): expiring, open-limited and revocable links
+- [Agent-to-agent file transfer over MCP](docs/agent-to-agent-file-transfer.md): a link only one named agent can open
+- [Human approval before an agent releases a file](docs/approval-before-release.md): links stay locked until you approve
+
 ## Quickstart: REST (3 calls)
 
 ```bash
