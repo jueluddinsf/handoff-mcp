@@ -2,7 +2,7 @@
   "mcpServers": {
     "handoff": {
       "type": "http",
-      "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+      "url": "https://hand-off.space/mcp",
       "headers": {
         "Authorization": "Bearer ${HANDOFF_API_KEY}"
       }

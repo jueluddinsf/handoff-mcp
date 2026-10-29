@@ -5,11 +5,11 @@ No `smithery.yaml` is needed. That file configures Smithery builds/deploys, and 
 - Form (logged in): https://smithery.ai/new
   - Namespace: `jueluddinsf`
   - Server ID: `handoff`
-  - MCP Server URL: `https://handoff-agent-file-sharing.replit.app/mcp`
+  - MCP Server URL: `https://hand-off.space/mcp`
 - CLI alternative, after `smithery login`:
 
   ```bash
-  smithery mcp publish "https://handoff-agent-file-sharing.replit.app/mcp" \
+  smithery mcp publish "https://hand-off.space/mcp" \
     -n @jueluddinsf/handoff --config-schema "$(cat smithery/config-schema.json)"
   ```
 

@@ -4,7 +4,7 @@
   "title": "Handoff: File Sharing for AI Agents",
   "description": "Private file storage for AI agents, with share links: expiry, max opens, approval, revoke, logs.",
   "version": "1.0.0",
-  "websiteUrl": "https://handoff-agent-file-sharing.replit.app/docs",
+  "websiteUrl": "https://hand-off.space/docs",
   "repository": {
     "url": "https://github.com/jueluddinsf/handoff-mcp",
     "source": "github"
@@ -12,11 +12,11 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+      "url": "https://hand-off.space/mcp",
       "headers": [
         {
           "name": "Authorization",
-          "description": "Bearer API key. Get one free, no email: POST https://handoff-agent-file-sharing.replit.app/v1/signup",
+          "description": "Bearer API key. Get one free, no email: POST https://hand-off.space/v1/signup",
           "value": "Bearer {api_key}",
           "isRequired": true,
           "isSecret": true,

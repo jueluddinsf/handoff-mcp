@@ -1,7 +1,7 @@
 """Agent -> human: save a report and return a 24h, 3-open link. Needs only `pip install requests`."""
 import base64, os, requests
 
-BASE = "https://handoff-agent-file-sharing.replit.app"
+BASE = "https://hand-off.space"
 H = {"authorization": f"Bearer {os.environ['HANDOFF_API_KEY']}"}
 
 def share_file(path: str, mime: str = "application/pdf", hours: int = 24, opens: int = 3) -> str:

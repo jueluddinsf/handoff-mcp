@@ -6,8 +6,8 @@
 
 Handoff gives an agent somewhere to put a file and a safe way to hand it to someone else. That someone can be a human or another agent. The agent saves the file privately, then creates a share link with the rules it needs: an expiry, a maximum number of opens, an optional human approval step, and a specific recipient agent. It can check status, revoke, and read the access log at any time.
 
-- **Remote MCP server:** `https://handoff-agent-file-sharing.replit.app/mcp` (Streamable HTTP)
-- **REST API:** `https://handoff-agent-file-sharing.replit.app/v1` ([OpenAPI](https://handoff-agent-file-sharing.replit.app/openapi.json), [llms.txt](https://handoff-agent-file-sharing.replit.app/llms.txt))
+- **Remote MCP server:** `https://hand-off.space/mcp` (Streamable HTTP)
+- **REST API:** `https://hand-off.space/v1` ([OpenAPI](https://hand-off.space/openapi.json), [llms.txt](https://hand-off.space/llms.txt))
 - **Auth:** `Authorization: Bearer <api_key>`. An agent gets a key by calling `POST /v1/signup`, with no email, card or human account.
 - **Registry name:** `io.github.jueluddinsf/handoff`
 
@@ -23,7 +23,7 @@ This repository holds docs and listing metadata. The service is hosted, so you h
 ## Quickstart: REST (3 calls)
 
 ```bash
-BASE=https://handoff-agent-file-sharing.replit.app
+BASE=https://hand-off.space
 
 # 1. Sign up. The key is shown once, so store it.
 curl -s -X POST $BASE/v1/signup -H 'content-type: application/json' -d '{"agent_id":"my-agent"}'
@@ -38,14 +38,14 @@ curl -s -X POST $BASE/v1/files -H "authorization: Bearer $HANDOFF_API_KEY" -H 'c
 # 3. Create a share link
 curl -s -X POST $BASE/v1/files/FILE_ID/grants -H "authorization: Bearer $HANDOFF_API_KEY" -H 'content-type: application/json' \
   -d '{"audience":"anyone_with_link","expires_in_hours":24,"max_opens":3}'
-# → {"grant_id":"…","url":"https://handoff-agent-file-sharing.replit.app/g/…"}
+# → {"grant_id":"…","url":"https://hand-off.space/g/…"}
 ```
 
 Give the `url` to the recipient. It downloads with a plain `GET`.
 
 ## Quickstart: MCP (3 tool calls)
 
-1. Connect your client to `https://handoff-agent-file-sharing.replit.app/mcp` (configs below).
+1. Connect your client to `https://hand-off.space/mcp` (configs below).
 2. Get a key. Call the `signup` MCP tool, or `POST /v1/signup` as shown above. Put the key in your client's `Authorization: Bearer …` header and reconnect.
    > The keyless `signup` tool is rolling out. If your client shows only the six tools below, use `POST /v1/signup`.
 3. Call `save_file` → `create_share_link`, then hand over the returned `url`.
@@ -68,14 +68,14 @@ In each config below, replace `YOUR_HANDOFF_API_KEY` with your key, or use the e
 ### Claude Code
 
 ```bash
-claude mcp add --transport http handoff https://handoff-agent-file-sharing.replit.app/mcp \
+claude mcp add --transport http handoff https://hand-off.space/mcp \
   --header "Authorization: Bearer YOUR_HANDOFF_API_KEY"
 ```
 
 You can also commit a project-scoped `.mcp.json`, which is the file in this repo. Claude Code expands `${HANDOFF_API_KEY}` from your environment:
 
 ```json
-{ "mcpServers": { "handoff": { "type": "http", "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+{ "mcpServers": { "handoff": { "type": "http", "url": "https://hand-off.space/mcp",
   "headers": { "Authorization": "Bearer ${HANDOFF_API_KEY}" } } } }
 ```
 
@@ -88,7 +88,7 @@ Claude Desktop custom connectors don't take a static header, so bridge with [`mc
   "mcpServers": {
     "handoff": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://handoff-agent-file-sharing.replit.app/mcp",
+      "args": ["-y", "mcp-remote", "https://hand-off.space/mcp",
                "--header", "Authorization:${HANDOFF_AUTH}"],
       "env": { "HANDOFF_AUTH": "Bearer YOUR_HANDOFF_API_KEY" }
     }
@@ -102,7 +102,7 @@ Claude Desktop custom connectors don't take a static header, so bridge with [`mc
 {
   "mcpServers": {
     "handoff": {
-      "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+      "url": "https://hand-off.space/mcp",
       "headers": { "Authorization": "Bearer ${env:HANDOFF_API_KEY}" }
     }
   }
@@ -119,7 +119,7 @@ Claude Desktop custom connectors don't take a static header, so bridge with [`mc
   "servers": {
     "handoff": {
       "type": "http",
-      "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+      "url": "https://hand-off.space/mcp",
       "headers": { "Authorization": "Bearer ${input:handoff_api_key}" }
     }
   }
@@ -135,7 +135,7 @@ Set `"type": "streamableHttp"` explicitly. If you leave it out, Cline falls back
   "mcpServers": {
     "handoff": {
       "type": "streamableHttp",
-      "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+      "url": "https://hand-off.space/mcp",
       "headers": { "Authorization": "Bearer YOUR_HANDOFF_API_KEY" },
       "disabled": false,
       "autoApprove": []
@@ -150,7 +150,7 @@ Set `"type": "streamableHttp"` explicitly. If you leave it out, Cline falls back
 {
   "mcpServers": {
     "handoff": {
-      "serverUrl": "https://handoff-agent-file-sharing.replit.app/mcp",
+      "serverUrl": "https://hand-off.space/mcp",
       "headers": { "Authorization": "Bearer ${env:HANDOFF_API_KEY}" }
     }
   }
@@ -168,7 +168,7 @@ async def main():
     async with MCPServerStreamableHttp(
         name="handoff",
         params={
-            "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+            "url": "https://hand-off.space/mcp",
             "headers": {"Authorization": f"Bearer {os.environ['HANDOFF_API_KEY']}"},
         },
         cache_tools_list=True,
@@ -193,7 +193,7 @@ from langchain.agents import create_agent
 client = MultiServerMCPClient({
     "handoff": {
         "transport": "streamable_http",
-        "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+        "url": "https://hand-off.space/mcp",
         "headers": {"Authorization": f"Bearer {os.environ['HANDOFF_API_KEY']}"},
     }
 })
@@ -206,7 +206,7 @@ agent = create_agent("openai:gpt-4.1", tools)  # or langgraph.prebuilt.create_re
 ```yaml
 mcp_servers:
   handoff:
-    url: "https://handoff-agent-file-sharing.replit.app/mcp"
+    url: "https://hand-off.space/mcp"
     headers:
       Authorization: "Bearer YOUR_HANDOFF_API_KEY"
 ```
@@ -215,7 +215,7 @@ mcp_servers:
 
 | Setting | Value |
 |---|---|
-| URL | `https://handoff-agent-file-sharing.replit.app/mcp` |
+| URL | `https://hand-off.space/mcp` |
 | Transport | Streamable HTTP (stateless, `POST` only) |
 | Header | `Authorization: Bearer <api_key>` |
 

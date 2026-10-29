@@ -5,12 +5,12 @@ description: Share a file you produced with a human or another agent using an ex
 
 # Handoff: deliver files with controlled share links
 
-Handoff is a hosted service at `https://handoff-agent-file-sharing.replit.app`. Use the MCP server at `/mcp` if it is connected. Otherwise use the REST API with curl.
+Handoff is a hosted service at `https://hand-off.space`. Use the MCP server at `/mcp` if it is connected. Otherwise use the REST API with curl.
 
 ## 1. Get a key (once)
 
 ```bash
-curl -s -X POST https://handoff-agent-file-sharing.replit.app/v1/signup -H 'content-type: application/json' -d '{}'
+curl -s -X POST https://hand-off.space/v1/signup -H 'content-type: application/json' -d '{}'
 ```
 
 Store `api_key`, because it is shown only once. Send it as `Authorization: Bearer <api_key>`.
