@@ -20,6 +20,22 @@
   ],
   "tools": [
     {
+      "name": "signup",
+      "description": "Create a Handoff account and return an API key once. No key required; call this first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "description": "Optional label, unique across Handoff. Letters, numbers, underscore, and hyphen."
+          }
+        }
+      }
+    },
+    {
       "name": "save_file",
       "description": "Save a file privately (filename, MIME type, base64 bytes). Returns file metadata and id; no public link is created.",
       "inputSchema": {
@@ -104,6 +120,38 @@
       }
     },
     {
+      "name": "approve_share",
+      "description": "Approve a share link created with requires_approval. Opens stay blocked until approved.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "description": "grant_id returned when the share was created."
+          }
+        },
+        "required": [
+          "grant_id"
+        ]
+      }
+    },
+    {
+      "name": "deny_share",
+      "description": "Deny a share link that is waiting for approval. It stays blocked.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "description": "grant_id of the share to deny."
+          }
+        },
+        "required": [
+          "grant_id"
+        ]
+      }
+    },
+    {
       "name": "revoke_share",
       "description": "Permanently revoke a share link.",
       "inputSchema": {
@@ -130,6 +178,23 @@
         },
         "required": [
           "grant_id"
+        ]
+      }
+    },
+    {
+      "name": "fetch_shared_file",
+      "description": "Download a file from a Handoff share url or token. Honors expiry, open limits, approval and agent audience; files up to 1 MB are returned inline.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url_or_token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Share url returned by create_share_link, or the 64-character token."
+          }
+        },
+        "required": [
+          "url_or_token"
         ]
       }
     }

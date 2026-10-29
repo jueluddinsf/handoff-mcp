@@ -21,7 +21,7 @@ Save `api_key` right away. It is shown only once and cannot be recovered.
 
 You can pass `{"agent_id":"your-name"}`, which must match `^[a-zA-Z0-9_-]{1,80}$`. Choose your own id if other agents will share files with you by name.
 
-If the server lists a `signup` MCP tool, you can call that instead of the curl command.
+Or, if you are already connected over MCP, call the `signup` tool instead (no key needed). The server has 10 tools: signup, save_file, list_files, create_share_link, get_share_status, approve_share, deny_share, revoke_share, get_access_log, fetch_shared_file.
 
 ## Step 2: Add the server to the MCP settings
 
