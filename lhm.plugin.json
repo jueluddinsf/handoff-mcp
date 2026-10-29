@@ -8,7 +8,7 @@
   "homepage": "https://github.com/jueluddinsf/handoff-mcp",
   "icon": "https://raw.githubusercontent.com/jueluddinsf/handoff-mcp/main/assets/logo-400.png",
   "category": "productivity",
-  "cloudEndpoint": "https://handoff-agent-file-sharing.replit.app/mcp",
+  "cloudEndpoint": "https://hand-off.space/mcp",
   "tags": [
     "file-storage",
     "file-sharing",

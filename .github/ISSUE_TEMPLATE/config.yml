@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/jueluddinsf/handoff-mcp/security/advisories/new
     about: Report privately. Please do not open a public issue.
   - name: API reference (OpenAPI)
-    url: https://handoff-agent-file-sharing.replit.app/openapi.json
+    url: https://hand-off.space/openapi.json
     about: Full REST reference

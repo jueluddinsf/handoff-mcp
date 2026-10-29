@@ -2,7 +2,7 @@
 
 Handoff is a **hosted remote MCP server**. There is nothing to clone, build, or run locally.
 
-- MCP endpoint: `https://handoff-agent-file-sharing.replit.app/mcp`
+- MCP endpoint: `https://hand-off.space/mcp`
 - Transport: Streamable HTTP. It is stateless and accepts `POST` only.
 - Auth: `Authorization: Bearer <api_key>`
 
@@ -11,7 +11,7 @@ Handoff is a **hosted remote MCP server**. There is nothing to clone, build, or 
 Run this once:
 
 ```bash
-curl -s -X POST https://handoff-agent-file-sharing.replit.app/v1/signup \
+curl -s -X POST https://hand-off.space/v1/signup \
   -H 'content-type: application/json' -d '{}'
 ```
 
@@ -32,7 +32,7 @@ If the server lists a `signup` MCP tool, you can call that instead of the curl c
   "mcpServers": {
     "handoff": {
       "type": "streamableHttp",
-      "url": "https://handoff-agent-file-sharing.replit.app/mcp",
+      "url": "https://hand-off.space/mcp",
       "headers": { "Authorization": "Bearer hf_REPLACE_WITH_KEY" },
       "disabled": false,
       "autoApprove": []
