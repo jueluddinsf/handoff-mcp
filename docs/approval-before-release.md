@@ -1,10 +1,26 @@
 # Human approval before an agent releases a file
 
-**Answer:** to make an agent wait for a human before a file goes out, create the Handoff share link with `requires_approval: true`. The link exists right away, so the agent can send it, but every open returns `403 {"error":"pending_approval"}` until the owner calls `approve_share`. If the owner calls `deny_share`, it stays blocked with `403 {"error":"denied"}`. Every attempt is logged.
+**Answer:** to make an agent wait for a human before a file goes out, share it with Handoff's `share_file` (or `POST /v1/share`) and `requires_approval: true`. The link exists right away, so the agent can send it, but every open returns `403 {"error":"pending_approval",…}` until the owner calls `approve_share`. If the owner calls `deny_share`, it stays blocked with `403 {"error":"denied",…}`. Every attempt is logged.
 
 Use this for anything sensitive, such as a contract draft, customer data, an invoice or a model-generated report a person should check first.
 
-## MCP
+## One call
+
+**MCP:** `share_file` with `{"name":"contract.md","content_text":"# Draft contract","requires_approval":true,"expires_in_hours":48}` returns `url`, `grant_id` and, if you sent no key, `api_key`. **Keep the `api_key` with the approver**, because approving needs it.
+
+**REST:**
+
+```bash
+curl -s -X POST https://hand-off.space/v1/share -H 'content-type: application/json' \
+  -d '{"name":"contract.md","content_text":"# Draft contract","requires_approval":true,"expires_in_hours":48}'
+# → {"url":"…","grant_id":"GRANT_ID","requires_approval":true,…,"api_key":"hf_…"}
+
+# Until approved, GET url → 403 {"error":"pending_approval",…}. The approver runs:
+curl -s -X POST https://hand-off.space/v1/grants/GRANT_ID/approve -H "authorization: Bearer hf_…"
+# → {…,"approval_status":"approved",…}. The same url now returns 200.
+```
+
+## More control over MCP
 
 1. `signup` (once) and `save_file` as usual. `save_file` returns `id`.
 2. `create_share_link` with `{"file_id":"<id>","audience":"anyone_with_link","requires_approval":true,"expires_in_hours":48}` returns `grant_id` and `url`. Save both.
@@ -14,7 +30,7 @@ Use this for anything sensitive, such as a contract draft, customer data, an inv
 
 You can combine this with `audience: "agent"` for an approval-gated agent-to-agent handoff, and with `max_opens` and `expires_in_hours`.
 
-## REST
+## More control over REST
 
 ```bash
 BASE=https://hand-off.space
@@ -38,7 +54,7 @@ curl -s -X POST $BASE/v1/files/$FILE_ID/grants -H "authorization: Bearer $HANDOF
   -d '{"audience":"anyone_with_link","requires_approval":true,"expires_in_hours":48}'
 # → {"grant_id":"GRANT_ID","url":"https://hand-off.space/g/…",…}
 
-curl -s "$URL"                       # → 403 {"error":"pending_approval"}
+curl -s "$URL"                       # → 403 {"error":"pending_approval",…}
 
 # 4. The owner approves (or POST …/deny)
 curl -s -X POST $BASE/v1/grants/GRANT_ID/approve -H "authorization: Bearer $HANDOFF_API_KEY"
@@ -49,7 +65,7 @@ curl -s "$URL"                       # → 200, the file
 
 ## Connect Handoff to your agent
 
-The server is hosted at `https://hand-off.space/mcp` (Streamable HTTP), so there is nothing to install. You need a key in the `Authorization` header for every tool except `signup`. Get one once with `curl -s -X POST https://hand-off.space/v1/signup -H 'content-type: application/json' -d '{}'`, or connect without a header and call the `signup` tool. Then `export HANDOFF_API_KEY=hf_...`.
+The server is hosted at `https://hand-off.space/mcp` (Streamable HTTP), so there is nothing to install. You can connect **with no header** and call `share_file` right away. It returns an `api_key` once, the first time. Save it with `export HANDOFF_API_KEY=hf_...` and add the header below, so that later calls (status, revoke, logs, more files) use the same account. You can also get a key on its own with `curl -s -X POST https://hand-off.space/v1/signup -H 'content-type: application/json' -d '{}'`, or with the `signup` tool.
 
 **Claude Code**
 

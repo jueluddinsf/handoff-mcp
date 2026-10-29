@@ -4,12 +4,12 @@
 
 **Send a file from an AI agent to a user or another agent with a controlled share link: expiry, max opens, human approval, agent-only audience, revoke and access log. Remote MCP server + REST API, no human signup.**
 
-Handoff gives an agent somewhere to put a file and a safe way to hand it to someone else. That someone can be a human or another agent. The agent saves the file privately, then creates a share link with the rules it needs: an expiry, a maximum number of opens, an optional human approval step, and a specific recipient agent. It can check status, revoke, and read the access log at any time.
+Handoff gives an agent a safe way to hand a file to someone else, either a human or another agent. **One call (`share_file` over MCP, or `POST /v1/share`) returns a download link, with no API key needed.** For more control, the agent saves the file privately, then creates a share link with the rules it needs: an expiry, a maximum number of opens, an optional human approval step, and a specific recipient agent. It can check status, revoke, and read the access log at any time.
 
 - **Remote MCP server:** `https://hand-off.space/mcp` (Streamable HTTP)
 - **REST API:** `https://hand-off.space/v1` ([OpenAPI](https://hand-off.space/openapi.json), [llms.txt](https://hand-off.space/llms.txt))
-- **Auth:** `Authorization: Bearer <api_key>`. An agent gets a key by calling the `signup` MCP tool or `POST /v1/signup`, with no email, card or human account.
-- **10 MCP tools:** `signup`, `save_file`, `list_files`, `create_share_link`, `get_share_status`, `approve_share`, `deny_share`, `revoke_share`, `get_access_log`, `fetch_shared_file`. `initialize` and `tools/list` need no key.
+- **Auth:** none for the first call. `share_file` / `POST /v1/share` without a key creates an account and returns its `api_key` once. Later calls send `Authorization: Bearer <api_key>` (or pass `api_key` as a tool argument when the client can't set headers). You can also get a key on its own with `signup` / `POST /v1/signup`. No email, card or human account is needed.
+- **11 MCP tools:** `share_file`, `signup`, `save_file`, `list_files`, `create_share_link`, `get_share_status`, `approve_share`, `deny_share`, `revoke_share`, `get_access_log`, `fetch_shared_file`. `initialize` and `tools/list` need no key.
 - **Registry name:** `io.github.jueluddinsf/handoff`
 
 This repository holds docs and listing metadata. The service is hosted, so you have nothing to install.
@@ -23,8 +23,8 @@ This repository holds docs and listing metadata. The service is hosted, so you h
 
 ## Common questions an agent asks
 
-- **How can my agent send a file (PDF, CSV, report, image) to the user?** Save it with `save_file`, call `create_share_link`, and reply with the returned `url`. The user opens it in a browser. No account is needed to download.
-- **How do I get a temporary or expiring download link?** Set `expires_in_hours` and `max_opens` on `create_share_link`. After that the link returns `410 expired` or `429 limit`.
+- **How can my agent send a file (PDF, CSV, report, image) to the user?** Call `share_file` with `name` and `content_text` (or `content_base64`), or `POST /v1/share`, and reply with the returned `url`. The user opens it in a browser. No account is needed to download.
+- **How do I get a temporary or expiring download link?** Links from `share_file` expire in 7 days by default. Set `expires_in_hours` and `max_opens` on `share_file` or `create_share_link`. After that the link returns `410 expired` or `429 limit`.
 - **How do I transfer a file from one agent to another?** Use `audience: "agent"` with the recipient's `agent_id`. Only that agent's key can open it, through `fetch_shared_file` or a plain `GET`.
 - **Can a human approve before the file is released?** Yes. Set `requires_approval: true`. Opens are blocked until `approve_share` is called.
 - **Can I take a link back or see who opened it?** Yes. Use `revoke_share` and `get_access_log`. Refused opens are logged too.
@@ -37,41 +37,71 @@ This repository holds docs and listing metadata. The service is hosted, so you h
 - [Agent-to-agent file transfer over MCP](docs/agent-to-agent-file-transfer.md): a link only one named agent can open
 - [Human approval before an agent releases a file](docs/approval-before-release.md): links stay locked until you approve
 
-## Quickstart: REST (3 calls)
+## Quickstart: one call
+
+**REST, raw bytes.** The response is the URL, plus `api_key: hf_…` on a second line when the call created an account:
+
+```bash
+curl -s --data-binary @report.pdf "https://hand-off.space/v1/share?name=report.pdf&format=url"
+# https://hand-off.space/g/…
+# api_key: hf_…
+```
+
+**REST, JSON:**
+
+```bash
+curl -s -X POST https://hand-off.space/v1/share -H 'content-type: application/json' \
+  -d '{"name":"notes.md","content_text":"# Notes","expires_in_hours":24,"max_opens":3}'
+# → {"url":"https://hand-off.space/g/…","expires_at":"…","max_opens":3,"requires_approval":false,
+#    "file_id":"…","grant_id":"…","token_prefix":"…","next":{…},"api_key":"hf_…"}
+```
+
+**MCP.** Connect to `https://hand-off.space/mcp` with no auth, then call:
+
+```json
+{"name": "share_file", "arguments": {"name": "notes.md", "content_text": "# Notes"}}
+```
+
+The result has `url`, `expires_at` (7 days by default), `grant_id`, `file_id` and, for a new account, `api_key` once. Give the `url` to the recipient, who downloads with a plain `GET`. **Save the `api_key`**: you need it to revoke the link, check its status or read the access log. Send it as `Authorization: Bearer <api_key>` (or as the `api_key` argument) on later calls, so new files stay in the same account.
+
+`share_file` and `POST /v1/share` also take `expires_in_hours`, `max_opens`, `audience` (`anyone_with_link` or `agent`), `audience_value`, `requires_approval`, `mime` and an optional `ref` label. With raw bytes, pass them as query parameters.
+
+## More control: REST (3 calls)
+
+Use this when you want to store a file once and create several links for it, each with its own rules.
 
 ```bash
 BASE=https://hand-off.space
 
 # 1. Sign up. The key is shown once, so store it.
 curl -s -X POST $BASE/v1/signup -H 'content-type: application/json' -d '{"agent_id":"my-agent"}'
-# → {"account_id":"…","api_key":"hf_…","agent_id":"my-agent","caps":{…}}
+# → {"account_id":"…","api_key":"hf_…","agent_id":"my-agent","caps":{…},"next":…}
 export HANDOFF_API_KEY=hf_...
 
-# 2. Save a file privately (base64 bytes)
+# 2. Save a file privately (content_text, or content_base64 for binary)
 curl -s -X POST $BASE/v1/files -H "authorization: Bearer $HANDOFF_API_KEY" -H 'content-type: application/json' \
-  -d "{\"name\":\"report.md\",\"mime\":\"text/markdown\",\"content_base64\":\"$(printf '# Q3 report' | base64)\"}"
+  -d '{"name":"report.md","mime":"text/markdown","content_text":"# Q3 report"}'
 # → {"id":"FILE_ID","name":"report.md",…}
 
 # 3. Create a share link
 curl -s -X POST $BASE/v1/files/FILE_ID/grants -H "authorization: Bearer $HANDOFF_API_KEY" -H 'content-type: application/json' \
   -d '{"audience":"anyone_with_link","expires_in_hours":24,"max_opens":3}'
-# → {"grant_id":"…","url":"https://hand-off.space/g/…"}
+# → {"grant_id":"…","url":"https://hand-off.space/g/…","token":"…","token_prefix":"…"}
 ```
 
-Give the `url` to the recipient. It downloads with a plain `GET`.
-
-## Quickstart: MCP (3 tool calls)
+## More control: MCP (3 tool calls)
 
 1. Connect your client to `https://hand-off.space/mcp` (configs below).
-2. Get a key. Call the `signup` MCP tool (no key needed), or `POST /v1/signup` as shown above. Put the key in your client's `Authorization: Bearer …` header and reconnect.
+2. Get a key with the `signup` MCP tool (no key needed) or `POST /v1/signup`. Put it in your client's `Authorization: Bearer …` header and reconnect, or pass `api_key` on each call.
 3. Call `save_file` → `create_share_link`, then hand over the returned `url`.
 
 ### Tools
 
 | Tool | What it does |
 |---|---|
-| `signup` | Create an account and return an API key once. No key needed. Optional `agent_id`. Call this first. |
-| `save_file` | Save a file privately: `name`, `mime`, `content_base64`. Returns the file id. No link is created. |
+| `share_file` | **One call.** `name` plus `content_text` or `content_base64`. Optional `mime`, `expires_in_hours` (default 168), `max_opens`, `audience`, `audience_value`, `requires_approval`, `ref`. Returns `url`, `expires_at`, `grant_id`, `file_id`, and `api_key` once if no key was sent. No key needed. |
+| `signup` | Create an account and return an API key once. No key needed. Optional `agent_id`. |
+| `save_file` | Save a file privately: `name`, `content_text` or `content_base64`, optional `mime`. Returns the file id. No link is created. |
 | `list_files` | List your files, newest first. |
 | `create_share_link` | `file_id`, `audience` (`anyone_with_link` or `agent`), optional `audience_value` (the recipient's `agent_id`), `expires_in_hours`, `max_opens`, `requires_approval`. Returns `grant_id` and `url` (shown once). |
 | `get_share_status` | Approval, expiry, revocation and `open_count` for a link, without using up an open. |
@@ -81,11 +111,11 @@ Give the `url` to the recipient. It downloads with a plain `GET`.
 | `get_access_log` | Up to the latest 1,000 opens and refusals for a link. |
 | `fetch_shared_file` | Download a file from a Handoff share `url` or token (honors expiry, open limits, approval and agent audience). Files up to 1 MB come back inline as `content_base64` (plus `content_text` for text); larger files return an error telling you to `GET` the url. |
 
-Every tool except `signup` (and `fetch_shared_file` on an `anyone_with_link` share) needs your API key.
+Every tool except `share_file`, `signup` and `fetch_shared_file` (on an `anyone_with_link` share) needs your API key. `share_file` with no key creates a new account.
 
 ## Client configuration
 
-In each config below, replace `YOUR_HANDOFF_API_KEY` with your key, or use the environment-variable form shown.
+You can connect with **no header at all** and call `share_file`, then save the `api_key` it returns. To add the key, replace `YOUR_HANDOFF_API_KEY` in the configs below with your key, or use the environment-variable form shown.
 
 ### Claude Code
 
@@ -233,6 +263,17 @@ mcp_servers:
       Authorization: "Bearer YOUR_HANDOFF_API_KEY"
 ```
 
+### OpenClaw (`~/.openclaw/openclaw.json`)
+
+Set `transport` explicitly, because OpenClaw defaults to SSE. Leave `headers` out to start with `share_file`.
+
+```json
+{ "mcp": { "servers": { "handoff": {
+  "url": "https://hand-off.space/mcp",
+  "transport": "streamable-http",
+  "headers": { "Authorization": "Bearer ${HANDOFF_API_KEY}" } } } } }
+```
+
 ### Any other MCP client
 
 | Setting | Value |
@@ -258,9 +299,9 @@ Add Handoff as a custom MCP connector:
 | Setting | Value |
 |---|---|
 | URL | `https://hand-off.space/mcp` |
-| Header | `Authorization: Bearer <api_key>` |
+| Header | none to start; later `Authorization: Bearer <api_key>` |
 
-Get a key with the `signup` MCP tool (no key needed to call it), or with `POST /v1/signup`. The key is shown once. Put it in the header and reconnect.
+The bot can call `share_file` right away, with no key. Save the `api_key` it returns (shown once), then put it in the header and reconnect, or pass it as the `api_key` tool argument.
 
 Or have the bot follow [`skills/handoff/SKILL.md`](skills/handoff/SKILL.md) and call the REST API over plain HTTP.
 
@@ -272,20 +313,23 @@ Example prompts:
 
 ## Recipes
 
-### Agent → human report, with an expiry
+### Agent → human report, in one call
+`share_file(name="report.md", content_text=…, expires_in_hours=24, max_opens=3)` → send the `url`.
+
+### Agent → human report, with an expiry (3-step)
 `save_file(report.pdf)` → `create_share_link(audience="anyone_with_link", expires_in_hours=24, max_opens=3)` → send the `url`. Use `get_access_log` to confirm it was opened.
 
 ### Agent → agent handoff
-Agent A calls `create_share_link(audience="agent", audience_value="agent-b")`. Agent B downloads with its own key:
+Agent A calls `share_file(name=…, content_text=…, audience="agent", audience_value="agent-b")`, or `create_share_link(audience="agent", audience_value="agent-b")` for a saved file. Agent B downloads with its own key:
 
 ```bash
 curl -L -H "authorization: Bearer $AGENT_B_KEY" -o out.bin "$URL"
 ```
 
-Over MCP, Agent B can call `fetch_shared_file(url_or_token=URL)` instead. Any other caller gets `401 {"error":"unauthorized"}`.
+Over MCP, Agent B can call `fetch_shared_file(url_or_token=URL)` instead. Any other caller gets `401 {"error":"unauthorized",…}`.
 
 ### Human-approval gate
-`create_share_link(..., requires_approval=true)`. Until the owner approves, opens return `403 {"error":"pending_approval"}`. To approve or deny, call the `approve_share` / `deny_share` MCP tools, or:
+`share_file(..., requires_approval=true)` or `create_share_link(..., requires_approval=true)`. Until the owner approves, opens return `403 {"error":"pending_approval",…}`. To approve or deny, call the `approve_share` / `deny_share` MCP tools, or:
 
 ```bash
 curl -X POST -H "authorization: Bearer $HANDOFF_API_KEY" $BASE/v1/grants/GRANT_ID/approve   # or /deny
