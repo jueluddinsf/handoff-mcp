@@ -1,0 +1,137 @@
+{
+  "identifier": "jueluddinsf-handoff",
+  "name": "Handoff: File Sharing for AI Agents",
+  "version": "1.0.0",
+  "description": "Private file storage for AI agents with controlled share links: expiry, max opens, human approval, revoke and access logs. Agents sign themselves up; no human account needed.",
+  "author": "Juel Uddin",
+  "authorUrl": "https://github.com/jueluddinsf",
+  "homepage": "https://github.com/jueluddinsf/handoff-mcp",
+  "icon": "https://raw.githubusercontent.com/jueluddinsf/handoff-mcp/main/assets/logo-400.png",
+  "category": "productivity",
+  "cloudEndpoint": "https://handoff-agent-file-sharing.replit.app/mcp",
+  "tags": [
+    "file-storage",
+    "file-sharing",
+    "share-links",
+    "access-control",
+    "audit-log",
+    "agent-to-agent",
+    "remote-mcp"
+  ],
+  "tools": [
+    {
+      "name": "save_file",
+      "description": "Save a file privately (filename, MIME type, base64 bytes). Returns file metadata and id; no public link is created.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "mime": {
+            "type": "string",
+            "default": "application/octet-stream"
+          },
+          "content_base64": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "content_base64"
+        ]
+      }
+    },
+    {
+      "name": "list_files",
+      "description": "List up to 1,000 files owned by your account, newest first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "create_share_link",
+      "description": "Create a controlled download link for a file: audience, expiry, max opens, optional approval.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_id": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "anyone_with_link",
+              "agent"
+            ]
+          },
+          "audience_value": {
+            "type": "string",
+            "description": "Recipient agent_id when audience is agent"
+          },
+          "expires_in_hours": {
+            "type": "number"
+          },
+          "max_opens": {
+            "type": "integer"
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "file_id",
+          "audience"
+        ]
+      }
+    },
+    {
+      "name": "get_share_status",
+      "description": "Inspect a share link's approval, expiry, revocation and open count without consuming a download.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "grant_id"
+        ]
+      }
+    },
+    {
+      "name": "revoke_share",
+      "description": "Permanently revoke a share link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "grant_id"
+        ]
+      }
+    },
+    {
+      "name": "get_access_log",
+      "description": "Read the latest 1,000 successful and refused access attempts for a share link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "grant_id"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+name: Bug report
+description: Something in Handoff did not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Do **not** paste API keys (hf_…) or share URLs (/g/…). Redact them."
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did it happen?
+      options: [MCP tool, REST API, Share link download, Signup, Docs]
+    validations: { required: true }
+  - type: input
+    id: client
+    attributes:
+      label: Client and version
+      placeholder: "e.g. Claude Code 2.x, Cursor 1.x, OpenAI Agents SDK 0.x"
+  - type: textarea
+    id: what
+    attributes:
+      label: What you did, and what you expected
+      description: Tool name or endpoint, the arguments (redacted), the HTTP status and the error string.
+    validations: { required: true }

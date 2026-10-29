@@ -1,0 +1,14 @@
+name: Feature request
+description: Something your agent needs to hand off files
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: usecase
+    attributes:
+      label: What was your agent trying to do?
+      description: Who sends what to whom, and what rule (expiry, approval, recipient) mattered?
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would make it work?

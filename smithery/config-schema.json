@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "apiKey": {
+      "type": "string",
+      "title": "Handoff API key",
+      "description": "Get one free with POST https://handoff-agent-file-sharing.replit.app/v1/signup (returned once as api_key).",
+      "x-from": {
+        "header": "x-handoff-api-key"
+      },
+      "x-to": {
+        "header": "Authorization"
+      }
+    }
+  },
+  "required": [
+    "apiKey"
+  ]
+}
