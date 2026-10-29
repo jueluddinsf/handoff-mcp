@@ -62,13 +62,14 @@ If you get `API key required`, check these:
 
 ## More control
 
-The server has 11 tools: share_file, signup, save_file, list_files, create_share_link, get_share_status, approve_share, deny_share, revoke_share, get_access_log, fetch_shared_file.
+The server has 14 tools: share_file, signup, save_file, list_files, create_share_link, get_share_status, approve_share, deny_share, revoke_share, get_access_log, fetch_shared_file, delete_file, list_shares, update_share.
 
 - `share_file` options: `expires_in_hours`, `max_opens`, `audience` (`anyone_with_link` or `agent`), `audience_value`, `requires_approval`, `mime`, `ref`.
-- To share one stored file several times with different rules, call `save_file` (`name`, `content_text` or `content_base64`) and then `create_share_link` for each link.
+- To share one stored file several times with different rules, call `save_file` (`name`, `content_text` or `content_base64`) and then `create_share_link` for each link. `create_share_link` links expire in 7 days unless you set `expires_in_hours`; change it later with `update_share`.
 
 ## Notes
 
 - Free accounts: 100 MB total, 50 files, 10 MB per file, 200 opens per day.
-- Executables, scripts, HTML and archives are refused.
+- HTML, markdown, code and zip files are allowed. Executables are refused.
+- Link previews (Slack, X, Discord…) don't consume opens. A link that used up its `max_opens` returns `410`.
 - Store the key like a password. Never put it in a share link, a file name, or a public repository.

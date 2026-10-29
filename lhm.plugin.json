@@ -40,7 +40,7 @@
           "content_base64": {
             "type": "string",
             "maxLength": 70000000,
-            "description": "Standard base64 file bytes. Do not include a data: URL prefix."
+            "description": "Standard or url-safe base64. A data:*;base64, prefix is stripped. Example: aGk="
           },
           "mime": {
             "type": "string",
@@ -88,7 +88,8 @@
         "required": [
           "name"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -112,7 +113,8 @@
             "description": "Optional attribution label. Lowercase letters, digits, dot, underscore, or hyphen. At most 64 characters."
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -142,13 +144,14 @@
           "content_base64": {
             "type": "string",
             "maxLength": 70000000,
-            "description": "Standard base64 file bytes. Do not include a data: URL prefix."
+            "description": "Standard or url-safe base64. A data:*;base64, prefix is stripped. Example: aGk="
           }
         },
         "required": [
           "name"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -157,29 +160,31 @@
       "inputSchema": {
         "type": "object",
         "properties": {},
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
       "name": "create_share_link",
-      "description": "Create a controlled download link for a file you own. Use this when a person or another agent should fetch the file. The response includes url and token ONCE. Save the url immediately. Later status calls do not return it. Download with GET on that url. Requires your API key.",
+      "description": "Create a controlled download link for a file you own. Use this when a person or another agent should fetch the file. The response includes url and token ONCE, plus expires_at and max_opens. Save the url immediately. Later status calls do not return it. When expires_in_hours is omitted, the link expires in 7 days. Download with GET on that url. Requires your API key.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "file_id": {
             "type": "string",
+            "minLength": 1,
             "description": "File id returned by save_file or list_files."
           },
           "audience_value": {
             "type": "string",
             "maxLength": 320,
-            "description": "Required for agent: the recipient's registered agent_id."
+            "description": "Required for agent: the recipient's registered agent_id. Example: their-agent"
           },
           "expires_in_hours": {
             "type": "number",
             "exclusiveMinimum": 0,
             "maximum": 87600,
-            "description": "Stop serving the file after this many hours."
+            "description": "Hours until the link expires. Default 168 (7 days) when omitted."
           },
           "max_opens": {
             "type": "integer",
@@ -205,7 +210,8 @@
           "file_id",
           "audience"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -216,13 +222,15 @@
         "properties": {
           "grant_id": {
             "type": "string",
+            "minLength": 1,
             "description": "grant_id returned when the share was created."
           }
         },
         "required": [
           "grant_id"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -233,13 +241,15 @@
         "properties": {
           "grant_id": {
             "type": "string",
+            "minLength": 1,
             "description": "grant_id returned when the share was created."
           }
         },
         "required": [
           "grant_id"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -250,13 +260,15 @@
         "properties": {
           "grant_id": {
             "type": "string",
+            "minLength": 1,
             "description": "grant_id of the share to deny."
           }
         },
         "required": [
           "grant_id"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -267,13 +279,15 @@
         "properties": {
           "grant_id": {
             "type": "string",
+            "minLength": 1,
             "description": "grant_id of the share to revoke."
           }
         },
         "required": [
           "grant_id"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -284,13 +298,15 @@
         "properties": {
           "grant_id": {
             "type": "string",
+            "minLength": 1,
             "description": "grant_id of the share to audit."
           }
         },
         "required": [
           "grant_id"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
@@ -308,7 +324,67 @@
         "required": [
           "url_or_token"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "delete_file",
+      "description": "Delete a file you own. The bytes are removed and existing share links stop working. Requires your API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "File id returned by save_file, list_files, or share_file."
+          }
+        },
+        "required": [
+          "file_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "list_shares",
+      "description": "List grants you own. Pass file_id to limit the list to one file. Returns grant_id, status, open_count, max_opens, expires_at, and audience. Does not return tokens or download urls. Requires your API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional file id. Omit to list every grant on this account."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "update_share",
+      "description": "Set when an owned share expires. expires_in_hours is measured from now. Example: 168 for 7 days. Does not return the token. Requires your API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expires_in_hours": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 87600
+          }
+        },
+        "required": [
+          "grant_id",
+          "expires_in_hours"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
       }
     }
   ]
