@@ -1,6 +1,6 @@
 # Agent-to-agent file transfer over MCP
 
-**Answer:** to hand a file from one AI agent to another, agent A saves it to Handoff and creates a link with `audience: "agent"` and `audience_value` set to agent B's `agent_id`. Only agent B's API key can open that link. Agent B calls `fetch_shared_file` with the URL, or sends a `GET` with its own `Authorization` header. Anyone else, including agent A, gets `401 {"error":"unauthorized"}`.
+**Answer:** to hand a file from one AI agent to another, agent A calls Handoff's `share_file` (or `POST /v1/share`) with `audience: "agent"` and `audience_value` set to agent B's `agent_id`. Only agent B's API key can open that link. Agent B calls `fetch_shared_file` with the URL, or sends a `GET` with its own `Authorization` header. Anyone else, including agent A, gets `401 {"error":"unauthorized",…}`.
 
 The two agents can run in different clients (Claude Code, Cursor, Hermes, OpenClaw, a LangGraph worker) and on different machines. They only need the URL and their own keys, with no shared disk and no pairing step.
 
@@ -16,7 +16,26 @@ curl -s -X POST https://hand-off.space/v1/signup -H 'content-type: application/j
 
 An `agent_id` is unique across Handoff and may contain letters, numbers, `_` and `-` (up to 80 characters). Over MCP, call `signup` with `{"agent_id":"report-reviewer"}`. Agent A can sign up with `{}`.
 
-## 2. Agent A sends
+## 2. Agent A sends, in one call
+
+**MCP:** `share_file`, with agent A's key in the header (or as `api_key`):
+
+```json
+{"name":"dataset.csv","content_text":"id,score\n1,0.9\n","audience":"agent","audience_value":"report-reviewer","expires_in_hours":2}
+```
+
+**REST:**
+
+```bash
+curl -s -X POST https://hand-off.space/v1/share \
+  -H "authorization: Bearer $AGENT_A_KEY" -H 'content-type: application/json' \
+  -d '{"name":"dataset.csv","content_text":"id,score\n1,0.9\n","audience":"agent","audience_value":"report-reviewer","expires_in_hours":2}'
+# → {"url":"https://hand-off.space/g/…","grant_id":"…","file_id":"…",…}
+```
+
+Pass the `url` to agent B through your orchestrator, a message, a ticket or a shared prompt.
+
+### More control: save once, then share
 
 **MCP**
 
@@ -33,7 +52,7 @@ curl -s -X POST https://hand-off.space/v1/files/$FILE_ID/grants \
 # → {"grant_id":"…","url":"https://hand-off.space/g/…",…}
 ```
 
-(`FILE_ID` comes from `POST /v1/files`. See [send a file to a user](send-file-to-user.md#rest-the-same-three-calls-with-curl).)
+(`FILE_ID` comes from `POST /v1/files`. See [send a file to a user](send-file-to-user.md#more-control-over-rest-the-same-three-calls-with-curl).)
 
 ## 3. Agent B receives
 
@@ -51,11 +70,11 @@ For larger files, the tool returns an error with the byte size. Download those w
 curl -sfL -H "authorization: Bearer $AGENT_B_KEY" -o dataset.csv "$URL"
 ```
 
-A request without agent B's key, or with any other key, gets `401 {"error":"unauthorized"}`. Agent B can check the `sha256` against the value agent A saw from `save_file`.
+A request without agent B's key, or with any other key, gets `401 {"error":"unauthorized",…}`. Agent B can check the `sha256` against the value agent A saw from `save_file`.
 
 ## Connect Handoff to your agent
 
-The server is hosted at `https://hand-off.space/mcp` (Streamable HTTP), so there is nothing to install. You need a key in the `Authorization` header for every tool except `signup`. Get one once with `curl -s -X POST https://hand-off.space/v1/signup -H 'content-type: application/json' -d '{}'`, or connect without a header and call the `signup` tool. Then `export HANDOFF_API_KEY=hf_...`.
+The server is hosted at `https://hand-off.space/mcp` (Streamable HTTP), so there is nothing to install. You can connect **with no header** and call `share_file` right away. It returns an `api_key` once, the first time. Save it with `export HANDOFF_API_KEY=hf_...` and add the header below, so that later calls (status, revoke, logs, more files) use the same account. You can also get a key on its own with `curl -s -X POST https://hand-off.space/v1/signup -H 'content-type: application/json' -d '{}'`, or with the `signup` tool.
 
 **Claude Code**
 

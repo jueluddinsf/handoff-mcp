@@ -1,10 +1,40 @@
 # How an AI agent can send a file to a user
 
-**Answer:** save the file to Handoff, create a share link, and reply with the URL. The user opens it in any browser, with no account. Over MCP that is three tool calls: `signup` (once), `save_file`, then `create_share_link`. You can make the link expire, cap how many times it opens, and revoke it later.
+**Answer:** call Handoff's `share_file` tool (or `POST /v1/share`) with the file, and reply with the URL it returns. That is one call, with no API key needed. The user opens the link in any browser, with no account. By default the link expires in 7 days. You can also make it expire sooner, cap how many times it opens, and revoke it later.
 
 This works for anything the agent produced, such as a PDF report, a CSV export, a chart image or a DOCX. Use it when the chat can't carry the attachment, or when the file has to leave the session.
 
-## MCP: three tool calls
+## One call
+
+**MCP:** call `share_file`:
+
+```json
+{"name": "report.md", "content_text": "# Q3 report\nRevenue up 12%.", "expires_in_hours": 24, "max_opens": 3}
+```
+
+For binary files (PDF, PNG, DOCX…), send `content_base64` instead of `content_text`. The result:
+
+```json
+{"url":"https://hand-off.space/g/…","expires_at":"…","max_opens":3,"requires_approval":false,
+ "file_id":"…","grant_id":"…","token_prefix":"…","api_key":"hf_…","next":{…}}
+```
+
+Reply to the user with the `url`. `api_key` appears only when the call created a new account. **Save it**, because it is shown once and you need it to check, revoke or log the link.
+
+**REST, straight from a file:**
+
+```bash
+curl -s --data-binary @report.pdf "https://hand-off.space/v1/share?name=report.pdf&format=url&expires_in_hours=24&max_opens=3"
+# https://hand-off.space/g/…
+# api_key: hf_…        (only when no key was sent)
+```
+
+Send `-H "authorization: Bearer $HANDOFF_API_KEY"` once you have a key, so all your files stay in one account.
+
+## More control: three tool calls
+
+Use this when you want to store a file once and create more than one link for it.
+
 
 1. `signup` with `{}`. It returns `api_key` once. Put it in your client's `Authorization: Bearer …` header, or pass `api_key` on each call.
 2. `save_file` with `{"name": "report.pdf", "mime": "application/pdf", "content_base64": "<base64 bytes>"}`. It returns `id`, which is the `file_id`.
@@ -18,7 +48,7 @@ A real `create_share_link` result looks like this:
 {"grant_id":"7cb4ea92-…","url":"https://hand-off.space/g/51e507a5…","token":"51e507a5…","token_prefix":"51e507a5"}
 ```
 
-## REST: the same three calls with curl
+## More control over REST: the same three calls with curl
 
 ```bash
 BASE=https://hand-off.space
@@ -49,11 +79,11 @@ The user downloads with a plain `GET` (or a click). The file arrives as an attac
 
 - `get_access_log` (REST `GET /v1/grants/{grant_id}/logs`) lists every open, with `result` set to `ok`, `limit`, `expired` and so on.
 - `get_share_status` (REST `GET /v1/grants/{grant_id}`) shows `open_count`, expiry and revocation.
-- `revoke_share` (REST `POST /v1/grants/{grant_id}/revoke`) makes the link return `403 {"error":"revoked"}`. The file is kept.
+- `revoke_share` (REST `POST /v1/grants/{grant_id}/revoke`) makes the link return `403 {"error":"revoked",…}`. The file is kept.
 
 ## Connect Handoff to your agent
 
-The server is hosted at `https://hand-off.space/mcp` (Streamable HTTP), so there is nothing to install. You need a key in the `Authorization` header for every tool except `signup`. Get one once with `curl -s -X POST https://hand-off.space/v1/signup -H 'content-type: application/json' -d '{}'`, or connect without a header and call the `signup` tool. Then `export HANDOFF_API_KEY=hf_...`.
+The server is hosted at `https://hand-off.space/mcp` (Streamable HTTP), so there is nothing to install. You can connect **with no header** and call `share_file` right away. It returns an `api_key` once, the first time. Save it with `export HANDOFF_API_KEY=hf_...` and add the header below, so that later calls (status, revoke, logs, more files) use the same account. You can also get a key on its own with `curl -s -X POST https://hand-off.space/v1/signup -H 'content-type: application/json' -d '{}'`, or with the `signup` tool.
 
 **Claude Code**
 
@@ -105,7 +135,7 @@ If your client can't set headers, pass `api_key` as a tool argument instead. Nev
 
 **Is the file public?** No. Files are private until you create a link, and each link is a separate grant with its own token, limits and log.
 
-**I lost the URL.** It can't be shown again. Create a new link with `create_share_link` (use `list_files` to find the `file_id`), and revoke the old one if needed.
+**I lost the URL.** It can't be shown again. Create a new link with `create_share_link` for the same `file_id` (use `list_files` to find the `file_id`), and revoke the old one if needed.
 
 **Can I send it only to a specific agent instead?** Yes. See [agent-to-agent file transfer](agent-to-agent-file-transfer.md).
 

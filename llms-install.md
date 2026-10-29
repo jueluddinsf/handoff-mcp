@@ -3,29 +3,12 @@
 Handoff is a **hosted remote MCP server**. There is nothing to clone, build, or run locally.
 
 - MCP endpoint: `https://hand-off.space/mcp`
-- Transport: Streamable HTTP. It is stateless and accepts `POST` only.
-- Auth: `Authorization: Bearer <api_key>`
+- Transport: Streamable HTTP. It is stateless and accepts `POST` only. Send `Accept: application/json, text/event-stream`.
+- Auth: **none needed to connect** or to call `share_file`. Later calls use `Authorization: Bearer <api_key>`.
 
-## Step 1: Get an API key (no human needed)
+## Step 1: Add the server with no auth
 
-Run this once:
-
-```bash
-curl -s -X POST https://hand-off.space/v1/signup \
-  -H 'content-type: application/json' -d '{}'
-```
-
-The response looks like `{"account_id":"…","api_key":"hf_…","agent_id":"…","caps":{…}}`.
-
-Save `api_key` right away. It is shown only once and cannot be recovered.
-
-You can pass `{"agent_id":"your-name"}`, which must match `^[a-zA-Z0-9_-]{1,80}$`. Choose your own id if other agents will share files with you by name.
-
-Or, if you are already connected over MCP, call the `signup` tool instead (no key needed). The server has 10 tools: signup, save_file, list_files, create_share_link, get_share_status, approve_share, deny_share, revoke_share, get_access_log, fetch_shared_file.
-
-## Step 2: Add the server to the MCP settings
-
-**Cline** (`cline_mcp_settings.json`). Keep `"type": "streamableHttp"`:
+**Cline** (`cline_mcp_settings.json`). Keep `"type": "streamableHttp"`, because Cline otherwise falls back to SSE:
 
 ```json
 {
@@ -33,7 +16,6 @@ Or, if you are already connected over MCP, call the `signup` tool instead (no ke
     "handoff": {
       "type": "streamableHttp",
       "url": "https://hand-off.space/mcp",
-      "headers": { "Authorization": "Bearer hf_REPLACE_WITH_KEY" },
       "disabled": false,
       "autoApprove": []
     }
@@ -41,23 +23,49 @@ Or, if you are already connected over MCP, call the `signup` tool instead (no ke
 }
 ```
 
-For other clients (Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, OpenAI Agents SDK, LangChain), use the matching snippet in README.md. The key goes in the same `Authorization` header in every client.
+**Claude Code:** `claude mcp add --transport http handoff https://hand-off.space/mcp`
 
-## Step 3: Verify
+For other clients (Claude Desktop, Cursor, VS Code, Windsurf, Hermes, OpenClaw, OpenAI Agents SDK, LangChain), use the matching snippet in README.md and leave the header out.
 
-Call `list_files`. A new account returns `[]`.
+## Step 2: First use, in one call
 
-If you get `401 {"error":"API key required"}`, check these:
+Call `share_file` with:
+
+```json
+{"name": "hello.md", "content_text": "# hello"}
+```
+
+The result includes `url` (the download link, which expires in 7 days by default), `grant_id`, `file_id` and `api_key`, which is **shown once** because this call created your account. Fetch the `url` with a plain GET, and it downloads `hello.md`.
+
+Without MCP, the same call over REST is `curl -s --data-binary @hello.md "https://hand-off.space/v1/share?name=hello.md&format=url"`. The first line is the URL. The second line is `api_key: hf_…`.
+
+## Step 3: Save the key
+
+Store `api_key` right away. It cannot be recovered. Then do one of these:
+
+- add `"headers": { "Authorization": "Bearer hf_REPLACE_WITH_KEY" }` to the config above and restart the server, or
+- if your client cannot set headers, pass `"api_key": "hf_…"` as an argument on each tool call.
+
+You need the key to revoke a link, check status, read the access log, or keep later files in the same account. A later `share_file` without a key creates a new, separate account.
+
+If you want a key before sharing anything, call the `signup` tool, or `POST https://hand-off.space/v1/signup` with `{}`. You can pass `{"agent_id":"your-name"}` (it must match `^[a-zA-Z0-9_-]{1,80}$`) if other agents will share files with you by name.
+
+## Step 4: Verify
+
+With the key set, call `list_files`. It lists the file from Step 2.
+
+If you get `API key required`, check these:
 
 - the header is missing or misspelled
 - `Bearer ` (with the space) is missing before the key
 - the server was not restarted after you edited the config
 
-## Step 4: First use
+## More control
 
-1. `save_file` with `{"name":"hello.txt","mime":"text/plain","content_base64":"aGVsbG8="}`. Note the returned `id`.
-2. `create_share_link` with `{"file_id":"<id>","audience":"anyone_with_link","expires_in_hours":1,"max_opens":1}`.
-3. Fetch the returned `url` with a plain GET. It downloads `hello.txt`.
+The server has 11 tools: share_file, signup, save_file, list_files, create_share_link, get_share_status, approve_share, deny_share, revoke_share, get_access_log, fetch_shared_file.
+
+- `share_file` options: `expires_in_hours`, `max_opens`, `audience` (`anyone_with_link` or `agent`), `audience_value`, `requires_approval`, `mime`, `ref`.
+- To share one stored file several times with different rules, call `save_file` (`name`, `content_text` or `content_base64`) and then `create_share_link` for each link.
 
 ## Notes
 

@@ -1,8 +1,8 @@
 {
   "identifier": "jueluddinsf-handoff",
-  "name": "Handoff: File Sharing for AI Agents",
-  "version": "1.0.0",
-  "description": "Private file storage for AI agents with controlled share links: expiry, max opens, human approval, revoke and access logs. Agents sign themselves up; no human account needed.",
+  "name": "Handoff: Send Files to Users & Agents",
+  "version": "1.0.1",
+  "description": "Send a file to a user or another agent in one call and get a share link, no API key needed. Add expiry, max opens, human approval, agent-only audience, revoke and access logs.",
   "author": "Juel Uddin",
   "authorUrl": "https://github.com/jueluddinsf",
   "homepage": "https://github.com/jueluddinsf/handoff-mcp",
@@ -20,8 +20,80 @@
   ],
   "tools": [
     {
+      "name": "share_file",
+      "description": "Share a file in one call and get a download link. Pass name and content_text (or content_base64). Works without an API key: if none is sent, a new account is created and its api_key is returned once; save it to revoke the link or read the access log later. Default link: anyone with the link, expires in 7 days.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "pattern": "^[^/\\\\\\x00-\\x1f]+$",
+            "description": "File name with an extension. No slashes or control characters."
+          },
+          "content_text": {
+            "type": "string",
+            "maxLength": 70000000,
+            "description": "UTF-8 text. Pass exactly one of content_text or content_base64."
+          },
+          "content_base64": {
+            "type": "string",
+            "maxLength": 70000000,
+            "description": "Standard base64 file bytes. Do not include a data: URL prefix."
+          },
+          "mime": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[\\w.+-]+\\/[\\w.+-]+$",
+            "description": "MIME type. Inferred from the file name when omitted."
+          },
+          "expires_in_hours": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 87600,
+            "description": "Hours until the link expires. Default 168 (7 days)."
+          },
+          "max_opens": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 2147483647,
+            "description": "Successful downloads allowed. Omit for no limit."
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "anyone_with_link",
+              "agent"
+            ],
+            "description": "Default anyone_with_link."
+          },
+          "audience_value": {
+            "type": "string",
+            "maxLength": 320,
+            "description": "Required when audience is agent."
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "description": "Default false. When true, downloads wait until the owner approves."
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9._-]+$",
+            "description": "Optional attribution label. Lowercase letters, digits, dot, underscore, or hyphen. At most 64 characters."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "signup",
-      "description": "Create a Handoff account and return an API key once. No key required; call this first.",
+      "description": "Create a Handoff account and return an API key once. No Authorization header is required. Save api_key. On later calls send Authorization: Bearer <api_key>, the bare key in Authorization, or X-Handoff-Api-Key. Pass api_key only if you cannot set headers. share_file can create this key for you. The key is a secret. Do not put it in a file you share.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -31,97 +103,114 @@
             "maxLength": 80,
             "pattern": "^[a-zA-Z0-9_-]+$",
             "description": "Optional label, unique across Handoff. Letters, numbers, underscore, and hyphen."
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9._-]+$",
+            "description": "Optional attribution label. Lowercase letters, digits, dot, underscore, or hyphen. At most 64 characters."
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     {
       "name": "save_file",
-      "description": "Save a file privately (filename, MIME type, base64 bytes). Returns file metadata and id; no public link is created.",
+      "description": "Save a private file for this account. Pass name and content_text or content_base64. Returns the file id and metadata. Does not share the file. Requires your API key.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "maxLength": 255
+            "minLength": 1,
+            "maxLength": 255,
+            "pattern": "^[^/\\\\\\x00-\\x1f]+$",
+            "description": "File name with an extension. No slashes or control characters."
           },
           "mime": {
             "type": "string",
-            "default": "application/octet-stream"
+            "maxLength": 200,
+            "pattern": "^[\\w.+-]+\\/[\\w.+-]+$",
+            "description": "MIME type. Inferred from the file name when omitted."
+          },
+          "content_text": {
+            "type": "string",
+            "maxLength": 70000000,
+            "description": "UTF-8 text. Pass exactly one of content_text or content_base64."
           },
           "content_base64": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 70000000,
+            "description": "Standard base64 file bytes. Do not include a data: URL prefix."
           }
         },
         "required": [
-          "name",
-          "content_base64"
-        ]
+          "name"
+        ],
+        "additionalProperties": false
       }
     },
     {
       "name": "list_files",
-      "description": "List up to 1,000 files owned by your account, newest first.",
+      "description": "List this account's files, newest first, up to 1000. Use this to find a file_id before sharing. Returns metadata only, never bytes or download URLs. Requires your API key.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {},
+        "additionalProperties": false
       }
     },
     {
       "name": "create_share_link",
-      "description": "Create a controlled download link for a file: audience, expiry, max opens, optional approval.",
+      "description": "Create a controlled download link for a file you own. Use this when a person or another agent should fetch the file. The response includes url and token ONCE. Save the url immediately. Later status calls do not return it. Download with GET on that url. Requires your API key.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "file_id": {
-            "type": "string"
+            "type": "string",
+            "description": "File id returned by save_file or list_files."
+          },
+          "audience_value": {
+            "type": "string",
+            "maxLength": 320,
+            "description": "Required for agent: the recipient's registered agent_id."
+          },
+          "expires_in_hours": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 87600,
+            "description": "Stop serving the file after this many hours."
+          },
+          "max_opens": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 2147483647,
+            "description": "Successful downloads allowed. The next one is refused."
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, downloads wait until the owner approves the grant."
           },
           "audience": {
             "type": "string",
             "enum": [
               "anyone_with_link",
               "agent"
-            ]
-          },
-          "audience_value": {
-            "type": "string",
-            "description": "Recipient agent_id when audience is agent"
-          },
-          "expires_in_hours": {
-            "type": "number"
-          },
-          "max_opens": {
-            "type": "integer"
-          },
-          "requires_approval": {
-            "type": "boolean",
-            "default": false
+            ],
+            "description": "anyone_with_link: whoever has the saved url. agent: only the registered agent_id in audience_value."
           }
         },
         "required": [
           "file_id",
           "audience"
-        ]
+        ],
+        "additionalProperties": false
       }
     },
     {
       "name": "get_share_status",
-      "description": "Inspect a share link's approval, expiry, revocation and open count without consuming a download.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "grant_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "grant_id"
-        ]
-      }
-    },
-    {
-      "name": "approve_share",
-      "description": "Approve a share link created with requires_approval. Opens stay blocked until approved.",
+      "description": "Read an owned grant: token_prefix (not the secret), audience, approval, expiry, revocation, and open_count. Does not download the file and does not return the share URL. Requires your API key.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -132,12 +221,30 @@
         },
         "required": [
           "grant_id"
-        ]
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "approve_share",
+      "description": "Approve an owned grant that was created with requires_approval. Opens stay blocked until this succeeds. Requires your API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "grant_id": {
+            "type": "string",
+            "description": "grant_id returned when the share was created."
+          }
+        },
+        "required": [
+          "grant_id"
+        ],
+        "additionalProperties": false
       }
     },
     {
       "name": "deny_share",
-      "description": "Deny a share link that is waiting for approval. It stays blocked.",
+      "description": "Deny an owned grant. A denied grant stays blocked. Requires your API key.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -148,42 +255,47 @@
         },
         "required": [
           "grant_id"
-        ]
+        ],
+        "additionalProperties": false
       }
     },
     {
       "name": "revoke_share",
-      "description": "Permanently revoke a share link.",
+      "description": "Permanently revoke an owned share. Later downloads fail. This cannot be undone and does not delete the file. Requires your API key.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "grant_id": {
-            "type": "string"
+            "type": "string",
+            "description": "grant_id of the share to revoke."
           }
         },
         "required": [
           "grant_id"
-        ]
+        ],
+        "additionalProperties": false
       }
     },
     {
       "name": "get_access_log",
-      "description": "Read the latest 1,000 successful and refused access attempts for a share link.",
+      "description": "Read the latest 1000 access attempts for an owned grant, including refused downloads. Use this to see whether a share was opened. Requires your API key.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "grant_id": {
-            "type": "string"
+            "type": "string",
+            "description": "grant_id of the share to audit."
           }
         },
         "required": [
           "grant_id"
-        ]
+        ],
+        "additionalProperties": false
       }
     },
     {
       "name": "fetch_shared_file",
-      "description": "Download a file from a Handoff share url or token. Honors expiry, open limits, approval and agent audience; files up to 1 MB are returned inline.",
+      "description": "Download a file from a share url or token. Use this when you were given a Handoff url and need the bytes. Honors expiry, open limits, approval, and agent audience. anyone_with_link needs no key. An agent audience uses your API key. Files up to 1048576 bytes return content_base64, plus content_text when the file is text. Larger files are not inlined: the error includes the byte size and tells you to GET the url. A successful inline return counts as an open. A file over the inline limit does not.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -195,7 +307,8 @@
         },
         "required": [
           "url_or_token"
-        ]
+        ],
+        "additionalProperties": false
       }
     }
   ]
