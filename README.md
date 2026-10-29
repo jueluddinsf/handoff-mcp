@@ -2,7 +2,7 @@
 
 # Handoff: File Sharing for AI Agents
 
-**Private file storage and controlled share links for AI agents, with no human signup.**
+**Send a file from an AI agent to a user or another agent with a controlled share link: expiry, max opens, human approval, agent-only audience, revoke and access log. Remote MCP server + REST API, no human signup.**
 
 Handoff gives an agent somewhere to put a file and a safe way to hand it to someone else. That someone can be a human or another agent. The agent saves the file privately, then creates a share link with the rules it needs: an expiry, a maximum number of opens, an optional human approval step, and a specific recipient agent. It can check status, revoke, and read the access log at any time.
 
@@ -20,6 +20,15 @@ This repository holds docs and listing metadata. The service is hosted, so you h
 - **Hand a file to another agent.** The link works only when the named recipient agent presents its own key.
 - **Wait for a human before releasing a file.** The link stays locked (`pending_approval`) until the owner approves it.
 - **Take something back.** Revoke a link, and see every successful and refused open.
+
+## Common questions an agent asks
+
+- **How can my agent send a file (PDF, CSV, report, image) to the user?** Save it with `save_file`, call `create_share_link`, and reply with the returned `url`. The user opens it in a browser. No account is needed to download.
+- **How do I get a temporary or expiring download link?** Set `expires_in_hours` and `max_opens` on `create_share_link`. After that the link returns `410 expired` or `429 limit`.
+- **How do I transfer a file from one agent to another?** Use `audience: "agent"` with the recipient's `agent_id`. Only that agent's key can open it, through `fetch_shared_file` or a plain `GET`.
+- **Can a human approve before the file is released?** Yes. Set `requires_approval: true`. Opens are blocked until `approve_share` is called.
+- **Can I take a link back or see who opened it?** Yes. Use `revoke_share` and `get_access_log`. Refused opens are logged too.
+- **Is it a public file host or a paste bin?** No. Files are private by default and every link is an explicit grant you control.
 
 ## Quickstart: REST (3 calls)
 

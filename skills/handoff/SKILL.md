@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Share a file you produced with a human or another agent using an expiring, revocable, logged link. Use when you need to deliver a report, export, image or dataset to someone outside this session, hand a file to another agent, or release a file only after a human approves.
+description: Send a file you produced (report, PDF, CSV, image, dataset) to a user or another agent as an expiring, revocable, logged share link, with optional max opens, human approval and agent-only audience. Use when you need to deliver a file to someone outside this session, get a temporary download link, hand a file to another agent, or release a file only after a human approves.
 ---
 
 # Handoff: deliver files with controlled share links

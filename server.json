@@ -2,9 +2,9 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.jueluddinsf/handoff",
   "title": "Handoff: File Sharing for AI Agents",
-  "description": "Private file storage for AI agents, with share links: expiry, max opens, approval, revoke, logs.",
+  "description": "Private file storage and controlled share links for AI agents.",
   "version": "1.0.0",
-  "websiteUrl": "https://hand-off.space/docs",
+  "websiteUrl": "https://hand-off.space",
   "repository": {
     "url": "https://github.com/jueluddinsf/handoff-mcp",
     "source": "github"
@@ -16,17 +16,9 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "Bearer API key. Get one free, no email: POST https://hand-off.space/v1/signup",
-          "value": "Bearer {api_key}",
-          "isRequired": true,
-          "isSecret": true,
-          "variables": {
-            "api_key": {
-              "description": "Handoff API key returned once by POST /v1/signup",
-              "isRequired": true,
-              "isSecret": true
-            }
-          }
+          "description": "API key from signup. Send Authorization: Bearer and the hf_ key, or the bare key. Not required to connect or list tools.",
+          "isRequired": false,
+          "isSecret": true
         }
       ]
     }
