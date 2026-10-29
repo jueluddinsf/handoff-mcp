@@ -16,14 +16,14 @@ curl -s --data-binary @export.csv "https://hand-off.space/v1/share?name=export.c
 # api_key: hf_…        (only when no key was sent; save it to revoke the link)
 ```
 
-That gives a one-hour, single-use link. The first GET returns 200 with the file. The second returns `429 {"error":"limit",…}`.
+That gives a one-hour, single-use link. The first GET returns 200 with the file. The second returns `410 {"error":"limit",…}`. Link previews from Slack, X, Discord and similar don't count as opens.
 
 ## The options
 
 | Field on `share_file` / `create_share_link` | Effect | Response when it trips |
 |---|---|---|
 | `expires_in_hours` | Stop serving after N hours (fractions allowed, max 87600) | `410 {"error":"expired",…}` |
-| `max_opens` | Allow at most N successful downloads | `429 {"error":"limit",…}` |
+| `max_opens` | Allow at most N successful downloads | `410 {"error":"limit",…}` |
 | `requires_approval` | Lock the link until the owner approves ([details](approval-before-release.md)) | `403 {"error":"pending_approval",…}` |
 | `audience: "agent"` + `audience_value` | Only one named agent's key can open it ([details](agent-to-agent-file-transfer.md)) | `401 {"error":"unauthorized",…}` |
 | `revoke_share` (after creation) | Kill the link permanently | `403 {"error":"revoked",…}` |
@@ -64,7 +64,7 @@ curl -s -X POST $BASE/v1/files/$FILE_ID/grants -H "authorization: Bearer $HANDOF
   -d '{"audience":"anyone_with_link","expires_in_hours":1,"max_opens":1}'
 # → {"grant_id":"…","url":"https://hand-off.space/g/…",…}
 
-# First GET → 200 with the file. Second GET → 429 {"error":"limit",…}.
+# First GET → 200 with the file. Second GET → 410 {"error":"limit",…}.
 # After an hour → 410 {"error":"expired",…}.
 # Revoke early:
 curl -s -X POST $BASE/v1/grants/GRANT_ID/revoke -H "authorization: Bearer $HANDOFF_API_KEY"
@@ -114,15 +114,15 @@ If your client can't set headers, pass `api_key` as a tool argument instead. Nev
 
 ## FAQ
 
-**What's the default expiry?** `share_file` and `POST /v1/share` links expire after 7 days (168 hours). A `create_share_link` link with neither `expires_in_hours` nor `max_opens` lasts until you revoke it, subject to account caps (200 successful opens per day on free accounts). Set an expiry for anything temporary.
+**What's the default expiry?** `share_file` and `POST /v1/share` links expire after 7 days (168 hours). `create_share_link` links also default to 7 days when `expires_in_hours` is omitted.
 
-**Can I extend a link?** Not yet. Create a new link for the same `file_id` and revoke the old one.
+**Can I extend a link?** Yes. Call `update_share` with the `grant_id` and a new `expires_in_hours`, measured from now.
 
-**Does checking status use up an open?** No. `get_share_status` and `get_access_log` never count as opens. A successful `fetch_shared_file` or `GET` does.
+**Does checking status use up an open?** No. `get_share_status` and `get_access_log` never count as opens. A successful `fetch_shared_file` or `GET` does. Link previews from Slack, X, Discord and similar unfurlers don't.
 
 **How is this different from a paste bin or a public file host?** The file stays private. Each link is a separate, logged grant with its own limits, and a refused open is recorded too.
 
-**Is the download safe to open?** Files are served as `application/octet-stream` attachments with `Content-Security-Policy: sandbox` and `nosniff`. HTML, scripts and executables can't be uploaded.
+**Is the download safe to open?** Files are served as `application/octet-stream` attachments with `Content-Security-Policy: sandbox` and `nosniff`. HTML, markdown, code and zip files can be uploaded; executables can't.
 
 ---
 

@@ -46,4 +46,5 @@ Return the `url` to the recipient.
 - Never paste the API key into a file, a link or a chat message.
 - Prefer short expiries and a small `max_opens`.
 - Free accounts: 10 MB per file, 50 files, 100 MB total, 200 opens per day.
-- Executables, HTML, scripts and archives are refused.
+- HTML, markdown, code and zip files are allowed; executables are refused.
+- Link previews from Slack, X, Discord and similar don't consume opens. An exhausted link returns `410`.

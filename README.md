@@ -9,7 +9,7 @@ Handoff gives an agent a safe way to hand a file to someone else, either a human
 - **Remote MCP server:** `https://hand-off.space/mcp` (Streamable HTTP)
 - **REST API:** `https://hand-off.space/v1` ([OpenAPI](https://hand-off.space/openapi.json), [llms.txt](https://hand-off.space/llms.txt))
 - **Auth:** none for the first call. `share_file` / `POST /v1/share` without a key creates an account and returns its `api_key` once. Later calls send `Authorization: Bearer <api_key>` (or pass `api_key` as a tool argument when the client can't set headers). You can also get a key on its own with `signup` / `POST /v1/signup`. No email, card or human account is needed.
-- **11 MCP tools:** `share_file`, `signup`, `save_file`, `list_files`, `create_share_link`, `get_share_status`, `approve_share`, `deny_share`, `revoke_share`, `get_access_log`, `fetch_shared_file`. `initialize` and `tools/list` need no key.
+- **14 MCP tools:** `share_file`, `signup`, `save_file`, `list_files`, `create_share_link`, `get_share_status`, `approve_share`, `deny_share`, `revoke_share`, `get_access_log`, `fetch_shared_file`, `delete_file`, `list_shares`, `update_share`. `initialize` and `tools/list` need no key.
 - **Registry name:** `io.github.jueluddinsf/handoff`
 
 This repository holds docs and listing metadata. The service is hosted, so you have nothing to install.
@@ -103,13 +103,16 @@ curl -s -X POST $BASE/v1/files/FILE_ID/grants -H "authorization: Bearer $HANDOFF
 | `signup` | Create an account and return an API key once. No key needed. Optional `agent_id`. |
 | `save_file` | Save a file privately: `name`, `content_text` or `content_base64`, optional `mime`. Returns the file id. No link is created. |
 | `list_files` | List your files, newest first. |
-| `create_share_link` | `file_id`, `audience` (`anyone_with_link` or `agent`), optional `audience_value` (the recipient's `agent_id`), `expires_in_hours`, `max_opens`, `requires_approval`. Returns `grant_id` and `url` (shown once). |
+| `create_share_link` | `file_id`, `audience` (`anyone_with_link` or `agent`), optional `audience_value` (the recipient's `agent_id`), `expires_in_hours` (default 168, 7 days), `max_opens`, `requires_approval`. Returns `grant_id`, `url` (shown once), `expires_at` and `max_opens`. |
 | `get_share_status` | Approval, expiry, revocation and `open_count` for a link, without using up an open. |
 | `approve_share` | Approve a link created with `requires_approval`. Opens stay blocked until this succeeds. |
 | `deny_share` | Deny a link that is waiting for approval. It stays blocked. |
 | `revoke_share` | Permanently revoke a link. The file is kept. |
 | `get_access_log` | Up to the latest 1,000 opens and refusals for a link. |
 | `fetch_shared_file` | Download a file from a Handoff share `url` or token (honors expiry, open limits, approval and agent audience). Files up to 1 MB come back inline as `content_base64` (plus `content_text` for text); larger files return an error telling you to `GET` the url. |
+| `delete_file` | Delete a file you own. The bytes are removed and existing share links stop working. |
+| `list_shares` | List links you own, optionally for one `file_id`: `grant_id`, status, `open_count`, `max_opens`, `expires_at`, audience. No tokens or URLs. |
+| `update_share` | Set a link's expiry: `grant_id`, `expires_in_hours` measured from now (e.g. 168 for 7 days). |
 
 Every tool except `share_file`, `signup` and `fetch_shared_file` (on an `anyone_with_link` share) needs your API key. `share_file` with no key creates a new account.
 
@@ -338,8 +341,9 @@ curl -X POST -H "authorization: Bearer $HANDOFF_API_KEY" $BASE/v1/grants/GRANT_I
 ## Limits (free, unclaimed accounts)
 
 - 100 MB total, 50 files, 10 MB per file, 200 successful opens per day.
-- Allowed file types: txt, md, csv, json, pdf, png, jpg, gif, webp, svg, xml, yaml, log, docx, xlsx, pptx.
-- Executables, scripts, HTML and archives are refused.
+- Allowed file types include text, markdown, HTML, code, CSV, JSON, PDF, images, Office documents and zip archives.
+- Executables are refused.
+- Link previews from Slack, X, Discord and similar unfurlers don't consume opens.
 - Signup is rate-limited per IP.
 
 ### Download responses
@@ -347,7 +351,8 @@ curl -X POST -H "authorization: Bearer $HANDOFF_API_KEY" $BASE/v1/grants/GRANT_I
 | Status | Error | Meaning |
 |---|---|---|
 | `410` | `expired` | The link is past its expiry. |
-| `429` | `limit` | The link hit its max opens or the daily cap. |
+| `410` | `limit` | The link hit its max opens. |
+| `429` | `limit` | The account hit its daily cap. |
 | `403` | `revoked` / `denied` / `pending_approval` | Revoked, denied, or still waiting for approval. |
 | `401` | `unauthorized` | The link is for a different agent. |
 

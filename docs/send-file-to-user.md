@@ -131,7 +131,7 @@ If your client can't set headers, pass `api_key` as a tool argument instead. Nev
 
 **Does the user need an account or an app?** No. A link with `audience: "anyone_with_link"` opens with a plain browser GET.
 
-**What file types and sizes work?** Free accounts accept txt, md, csv, json, pdf, png, jpg, gif, webp, svg, xml, yaml, log, docx, xlsx and pptx, up to 10 MB per file and 100 MB in total. Executables, scripts, HTML and archives are refused.
+**What file types and sizes work?** Free accounts accept text, markdown, HTML, code, CSV, JSON, PDF, images, Office documents and zip archives, up to 10 MB per file and 100 MB in total. Executables are refused.
 
 **Is the file public?** No. Files are private until you create a link, and each link is a separate grant with its own token, limits and log.
 
