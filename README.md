@@ -229,6 +229,25 @@ This repo also ships an [Agent Skill](skills/handoff/SKILL.md) that teaches any 
 npx skills add jueluddinsf/handoff-mcp
 ```
 
+## Use with Grok Bot
+
+Add Handoff as a custom MCP connector:
+
+| Setting | Value |
+|---|---|
+| URL | `https://hand-off.space/mcp` |
+| Header | `Authorization: Bearer <api_key>` |
+
+Get a key with the `signup` MCP tool, or with `POST /v1/signup` if that tool is not listed. The key is shown once. Put it in the header and reconnect.
+
+Or have the bot follow [`skills/handoff/SKILL.md`](skills/handoff/SKILL.md) and call the REST API over plain HTTP.
+
+Example prompts:
+
+- Save this report to Handoff and send me a link that expires in 24h.
+- Share this file with my other agent only.
+- Show me who opened the link, then revoke it.
+
 ## Recipes
 
 ### Agent → human report, with an expiry
